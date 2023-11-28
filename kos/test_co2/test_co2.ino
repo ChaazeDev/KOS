@@ -7,14 +7,14 @@
 
 //configuratie relay nrs en die ene servo
 
-#define roodRelay 31
-#define groenRelay 32
-#define blauwRelay 33
-#define HRelay 34
-#define ventileerRelay 35
-#define CO2Relay 36
-#define heatRelay 37
-#define coolRelay 38
+#define roodRelay 38
+#define groenRelay 37
+#define blauwRelay 36
+#define HRelay 35
+#define ventileerRelay 34
+#define CO2Relay 33
+#define heatRelay 32
+#define coolRelay 31
 #define HServo 39
 
 #include "DFRobot_OxygenSensor.h"                        
