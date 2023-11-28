@@ -1,0 +1,28 @@
+{
+    "accountGegevens":[
+        {
+            "ID": "admin",
+            "pass": "Freyx739",
+            "Auth": 5 ,
+            "Exit": "False"
+        },
+        {
+            "ID": "leerling",
+            "pass": "",
+            "Auth": 1,
+            "Exit": "False"
+        },
+        {
+            "ID": "docent",
+            "pass": "Kinre930",
+            "Auth": 4,
+            "Exit": "False"
+        },
+        {
+            "ID": "debug",
+            "pass": "debuggingiscool",
+            "Auth":0,
+            "Exit": "True"
+        }
+    ]
+}
