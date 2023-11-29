@@ -33,7 +33,7 @@ bool GState;
 bool BState;
 
 #define Oxygen_IICAddress ADDRESS_3
-#define COLLECT_NUMBER  10             // collect number, the collection range is 1-100.
+#define COLLECT_NUMBER  10
 
 DFRobot_OxygenSensor oxygen;
 DHT dht(tempPin, DHTTYPE);
@@ -41,13 +41,14 @@ Servo HumidServo;
 
 boolean DHTFail = false;
 boolean GOSFail = false;
+boolean ventileren = false;
 
 void setup()
 {
     Serial.begin(9600); // Device to serial monitor feedback
     Serial1.begin(9600);
     myMHZ19.begin(Serial1);
-    myMHZ19.autoCalibration();                              // Turn auto calibration ON (OFF autoCalibration(false))
+    myMHZ19.autoCalibration(true);
     dht.begin();
     while(!oxygen.begin(Oxygen_IICAddress)){
      oxygen.begin(Oxygen_IICAddress);
@@ -106,9 +107,6 @@ void loop()
     if (Serial.available() > 0){
 
       Serial.readStringUntil('\n').toCharArray(data, 50);
-      
-      Serial.print("got ");
-      Serial.println(data);
 
       C=String(data[1])+String(data[2])+String(data[3])+String(data[4]);
       H=String(data[6])+String(data[7])+String(data[8])+String(data[9]);
@@ -166,11 +164,28 @@ void loop()
         digitalWrite(heatRelay,HIGH);
         digitalWrite(coolRelay,HIGH);
       }
+     } 
+
+    if(V == "-"){
+    }else{
+     if(V.toInt() == 1){
+      ventileren=true;
+     }else if(V.toInt() == 0){
+      ventileren=false;
+     }else{
+      // do stuf
      }
 
-     if(V.toInt() == 1 and not V.toFloat() == 0.00){
-      Serial.println("ventileer time");
+    }
+    if(ventileren=true){
+      if(oxygenData >=19 and CO2 <= 2000){
+        ventileren=false;
+        digitalWrite(ventileerRelay,HIGH);
+      }else if(oxygenData <=18.9 or CO2 >=1999.9 ){
+        digitalWrite(ventileerRelay,LOW);
+      }
+      digitalWrite(ventileerRelay,LOW);
+    }else if(ventileren=false){
       digitalWrite(ventileerRelay,HIGH);
-     }
-
+    }
 }
