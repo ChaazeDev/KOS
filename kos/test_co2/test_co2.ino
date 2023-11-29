@@ -63,6 +63,7 @@ void setup()
    pinMode(HRelay, OUTPUT);
 
    HumidServo.attach(HServo);
+   HumidServo.write(85);
 }
 
 void loop()
@@ -146,13 +147,13 @@ void loop()
 
       if(humi <=H.toFloat()-5 and not H.toFloat()== 0.00){
         digitalWrite(HRelay,HIGH);
-        HumidServo.write(90);
+        HumidServo.write(85);
       }else if(humi >=H.toFloat()+5 and not H.toFloat()== 0.00){
         digitalWrite(HRelay,LOW);
-        HumidServo.write(-15);
+        HumidServo.write(0);
       }else if(not H.toFloat() ==0.00){
         digitalWrite(HRelay,LOW);
-        HumidServo.write(90);
+        HumidServo.write(85);
       }
 
       if(temp <= T.toFloat()-2 and not T.toFloat() == 0.00){
