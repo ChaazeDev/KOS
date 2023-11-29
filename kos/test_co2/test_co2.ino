@@ -146,13 +146,13 @@ void loop()
 
       if(humi <=H.toFloat()-5 and not H.toFloat()== 0.00){
         digitalWrite(HRelay,HIGH);
-        HumidServo.write(0);
+        HumidServo.write(90);
       }else if(humi >=H.toFloat()+5 and not H.toFloat()== 0.00){
         digitalWrite(HRelay,LOW);
-        HumidServo.write(90);
+        HumidServo.write(-15);
       }else if(not H.toFloat() ==0.00){
         digitalWrite(HRelay,LOW);
-        HumidServo.write(0);
+        HumidServo.write(90);
       }
 
       if(temp <= T.toFloat()-2 and not T.toFloat() == 0.00){
@@ -161,7 +161,7 @@ void loop()
       }else if(temp >=T.toFloat()+2 and not T.toFloat() == 0.00){
           digitalWrite(heatRelay,HIGH);
           digitalWrite(coolRelay,LOW);
-      }else if(not H.toFloat() ==0.00){
+      }else if(not T.toFloat() ==0.00){
         digitalWrite(heatRelay,HIGH);
         digitalWrite(coolRelay,HIGH);
       }
