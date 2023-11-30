@@ -1,4 +1,4 @@
-from gpiozero import CPUTemperature
+#from gpiozero import CPUTemperature
 from tkinter import *
 from customtkinter import *
 from PIL import Image, ImageTk
@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import numpy as np
+import pandas as pd
 import json
 
 # verklaren van enkele variabelen die nodig zijn
@@ -28,12 +29,12 @@ version = "KOS V1.0.1"
 arduinoAvailable = True
 
 # het openen van de beveiligingsdata
-f = open('/home/pi/kos/Security.json')
+f = open('C:/Users/cadek/Documents/GitHub/KOS/kos/Security.json')
 logindata = json.load(f)
 
 # probeer een verbinding met de arduino aan te gaan, anders foutmelding.
 try:
-    ser = serial.Serial('/dev/ttyUSB0', 9600, timeout=1.5) #USB0 of ATM0
+    ser = serial.Serial('COM5', 9600, timeout=1.5) #USB0 of ATM0
     ser.reset_input_buffer()
 except:
     arduinoAvailable = False
@@ -232,8 +233,8 @@ def grafiekConfig():
 
 	# sluit popup grafiek
 	def closeGConfig():
-         ConfigWindow.destroy()
-         Plotknopf.configure(state="normal")
+		ConfigWindow.destroy()
+		Plotknopf.configure(state="normal")
 	
 	# call de functie voor grafiek starten in thread
 	def InitiateGraph():
@@ -308,11 +309,12 @@ def grafiekConfig():
 				
 				
 				
-				
+				bestandsnaam = time.strftime("%H%M%S",time.localtime())+".csv"
+
 				total_rows = len(lst)
 				total_columns = len(lst[0])
 				
-				tijdtussenmetingen.configure(text="Tijd tussen metingen: "+str(hoevaakMetingen)+" seconden")
+				tijdtussenmetingen.configure(text=F"Tijd tussen metingen: {str(hoevaakMetingen)} seconden.\nOpgeslagen als: {bestandsnaam}")
 				tijdtussenmetingen.grid(row=0,column=0)
 				for i in range(total_rows):
 					for j in range(total_columns):
@@ -320,7 +322,13 @@ def grafiekConfig():
 						e.grid(row=j+1, column=i) 
 						e.insert(END,lst[i][j])
 						
-				
+				arr = np.array((coArray,oArray))
+
+
+
+				df = pd.DataFrame(arr)
+				df.to_csv(bestandsnaam,index=False,header=x)
+
 			Plotknopf.configure(state="normal")
 				
 		except:
@@ -519,7 +527,7 @@ def update_values():
     if arduinoAvailable:
         CoreHeatVal.configure(text_color="#f2f3f4")
         while True:
-            raspberrypicoretemperature = round(CPUTemperature().temperature)
+            raspberrypicoretemperature = 60#round(CPUTemperature().temperature)
             CoreHeatVal.configure(text=str(raspberrypicoretemperature)+"°C")
             time.sleep(1)
             dataStr = write_read("")
@@ -539,7 +547,7 @@ def update_values():
                  popuptext.configure(text=oldtext+"\nSensor error")
                  print(ProcessedData)
                  print(dataStr)
-            if int(oxygi) >=19 and int(coi)<=2000 and ventknop.cget('fg_color') == "red":
+            if float(oxygi) >=19 and float(coi)<=2000 and ventknop.cget('fg_color') == "red":
                 package= "C----H----T----R-G-B-V0\n"
                 ser.write(package.encode())
                 erderetext = popuptext.cget("text")
