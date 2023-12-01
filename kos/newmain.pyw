@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import numpy as np
+import pandas as pd
 import json
 
 # verklaren van enkele variabelen die nodig zijn
@@ -133,7 +134,6 @@ def toepas():
 			Bo.configure(text="uit")
 	except:
 		print("B empty")
-	print(arduinoVals)
 		
 	package = arduinoVals +"V-\n"
 	ser.write(package.encode())
@@ -244,6 +244,7 @@ def grafiekConfig():
 	def GraphStart():
 		try:
 			
+						
 			ax.cla()
 			ax2.cla()
 			aantalMetingen = int(metingen.get())
@@ -308,11 +309,12 @@ def grafiekConfig():
 				
 				
 				
-				
+				bestandsnaam = time.strftime("%H%M%S",time.localtime())+".csv"
+
 				total_rows = len(lst)
 				total_columns = len(lst[0])
 				
-				tijdtussenmetingen.configure(text="Tijd tussen metingen: "+str(hoevaakMetingen)+" seconden")
+				tijdtussenmetingen.configure(text=F"Tijd tussen metingen: {str(hoevaakMetingen)} seconden.\nOpgeslagen als: {bestandsnaam}")
 				tijdtussenmetingen.grid(row=0,column=0)
 				for i in range(total_rows):
 					for j in range(total_columns):
@@ -320,7 +322,13 @@ def grafiekConfig():
 						e.grid(row=j+1, column=i) 
 						e.insert(END,lst[i][j])
 						
-				
+				arr = np.array((coArray,oArray))
+
+
+
+				df = pd.DataFrame(arr)
+				df.to_csv(bestandsnaam,index=False,header=x)
+
 			Plotknopf.configure(state="normal")
 				
 		except:
@@ -533,13 +541,12 @@ def update_values():
                 temp.configure(text=tempi)
                 Humid.configure(text=humidi)
                 CO.configure(text=coi+" ppm")
-                print(ProcessedData)
             except:
                  oldtext = popuptext.cget("text")
                  popuptext.configure(text=oldtext+"\nSensor error")
                  print(ProcessedData)
                  print(dataStr)
-            if int(oxygi) >=19 and int(coi)<=2000 and ventknop.cget('fg_color') == "red":
+            if float(oxygi) >=19 and float(coi)<=2000 and ventknop.cget('fg_color') == "red":
                 package= "C----H----T----R-G-B-V0\n"
                 ser.write(package.encode())
                 erderetext = popuptext.cget("text")

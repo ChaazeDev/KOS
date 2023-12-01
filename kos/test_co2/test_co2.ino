@@ -62,9 +62,11 @@ void setup()
    pinMode(groenRelay, OUTPUT);
    pinMode(blauwRelay, OUTPUT);
    pinMode(HRelay, OUTPUT);
-
+  
    HumidServo.attach(HServo);
    HumidServo.write(85);
+   pinMode(13,OUTPUT); //built in led
+   digitalWrite(13,LOW);
 }
 
 void loop()
@@ -100,8 +102,12 @@ void loop()
     Serial.print("O");
     Serial.print(oxygenData);                          // Request CO2 (as ppm)
         
-    Serial.print("C");                      
+    Serial.print("C");    
+    if(CO2<1000){
+         Serial.println("0"+String((CO2)));                  
+    }else{
     Serial.println(CO2);  
+    }
 
     char data[50];
     if (Serial.available() > 0){
@@ -177,15 +183,21 @@ void loop()
      }
 
     }
-    if(ventileren=true){
+    if(ventileren==true){
       if(oxygenData >=19 and CO2 <= 2000){
         ventileren=false;
         digitalWrite(ventileerRelay,HIGH);
+        digitalWrite(13,LOW);
       }else if(oxygenData <=18.9 or CO2 >=1999.9 ){
         digitalWrite(ventileerRelay,LOW);
+        digitalWrite(13,HIGH);
       }
       digitalWrite(ventileerRelay,LOW);
-    }else if(ventileren=false){
+      digitalWrite(13,HIGH);
+    }else if(ventileren==false){
       digitalWrite(ventileerRelay,HIGH);
+              digitalWrite(13,LOW);
     }
+
+    
 }
