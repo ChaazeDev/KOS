@@ -13,6 +13,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import numpy as np
 import pandas as pd
 import json
+import os
 
 # verklaren van enkele variabelen die nodig zijn
 newr = 0
@@ -310,7 +311,7 @@ def grafiekConfig():
 				
 				
 				bestandsnaam = time.strftime("%H%M%S",time.localtime())+".csv"
-
+				
 				total_rows = len(lst)
 				total_columns = len(lst[0])
 				
@@ -327,7 +328,11 @@ def grafiekConfig():
 
 
 				df = pd.DataFrame(arr)
-				df.to_csv(bestandsnaam,index=False,header=x)
+				df.to_csv(f"/home/pi/metingen/files/{bestandsnaam}",index=False,header=x)
+				
+				os.system('python3 /home/pi/kos/genindex.py ~/metingen/files')
+
+
 
 			Plotknopf.configure(state="normal")
 				
@@ -445,7 +450,7 @@ Coreheat = CTkLabel(master=mainconfig, text="PI CPU temp:")
 Coreheat.place(x=1700, y=30, anchor=W)
 
 # gemeten pi cpu temperatuur
-CoreHeatVal = CTkLabel(master=mainconfig, text="ERROR!", text_color="#FF5733")
+CoreHeatVal = CTkLabel(master=mainconfig, text="ERROR!", text_color="white")
 CoreHeatVal.place(x=1800, y=30, anchor=W)
 
 # knop voor de output wissen
@@ -523,20 +528,28 @@ def show_frames():
 
 # gelezen waarden bijwerken functie
 def update_values():
-    time.sleep(5)
+    raspberrypicoretemperature = round(CPUTemperature().temperature,1)
+    CoreHeatVal.configure(text=str(raspberrypicoretemperature)+"°C")
+    time.sleep(8)
     if arduinoAvailable:
-        CoreHeatVal.configure(text_color="#f2f3f4")
         while True:
-            raspberrypicoretemperature = round(CPUTemperature().temperature)
-            CoreHeatVal.configure(text=str(raspberrypicoretemperature)+"°C")
             time.sleep(1)
+            
+            if raspberrypicoretemperature >= 65:
+                CoreHeatVal.configure(text_color="#FF5733")
+            else:
+                CoreHeatVal.configure(text_color="white")
+            
             dataStr = write_read("")
             ProcessedData = list(dataStr)
             try: 
                 oxygi = ProcessedData[13]+ProcessedData[14]+ProcessedData[15]+ProcessedData[16]+ProcessedData[17]
                 tempi = ProcessedData[7]+ProcessedData[8]+ProcessedData[9]+ProcessedData[10]+ProcessedData[11]+"°C"
                 humidi = ProcessedData[1]+ProcessedData[2]+ProcessedData[3]+ProcessedData[4]+ProcessedData[5]+"%"
-                coi = ProcessedData[19]+ProcessedData[20]+ProcessedData[21]+ProcessedData[22]
+                if not ProcessedData[19] == "0":
+                    coi = ProcessedData[19]+ProcessedData[20]+ProcessedData[21]+ProcessedData[22]
+                else:
+                     coi = ProcessedData[20]+ProcessedData[21]+ProcessedData[22]
                 O.configure(text=oxygi+"%")
                 temp.configure(text=tempi)
                 Humid.configure(text=humidi)
@@ -555,7 +568,9 @@ def update_values():
 	                
     else:
         popuptext.configure(text="Arduino verbinding onstabiel of anders onbruikbaar")
-
+        raspberrypicoretemperature = round(CPUTemperature().temperature)
+        CoreHeatVal.configure(text=str(raspberrypicoretemperature)+"°C")
+        
 
 # thread (meerdere dingen tegelijk in een cpu) starten voor waarden bijwerken
 varThread = threading.Thread(target=update_values, daemon=True)
