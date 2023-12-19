@@ -26,7 +26,7 @@ arduinoVals = ""
 
 
 # algemene systeeminformatie
-version = "KOS V1.0.1"
+version = "KOS V1.1"
 arduinoAvailable = True
 
 # het openen van de beveiligingsdata
@@ -182,6 +182,10 @@ def rechtCheck():
             deAuthTread.start()
             authWindow.destroy()
             AantVentileren = 0
+          elif passw=="ongeldig": 
+             wwtext.configure(text="haha heel grappig")
+          else:
+             wwtext.configure(text="wachtwoord is ongeldig")
             
      
     loguitknopf.configure(state="disabled")
@@ -190,9 +194,11 @@ def rechtCheck():
     cancelButn = CTkButton(master=authWindow,text="X",fg_color="red",hover_color="#8b0000",height=10,width=30,command=closeAuth)
     cancelButn.place(x=5,y=15,anchor=W)
     label = CTkLabel(master=authWindow, text="Authorisatie vereist", font=("Roboto", 20))
-    label.place(y=20,x=175)
+    label.place(y=20,x=155)
     password = CTkEntry(master=authWindow, placeholder_text="Password", show="•", width=150, height=30, font=("Roboto", 10))
     password.place(y=100,x=175)
+    wwtext = CTkLabel(master=authWindow, text="", text_color="#FF5733")
+    wwtext.place(y=70,x=175)
     loginbutton = CTkButton(master=authWindow, text="Login", command=login, width=150, height=20)
     loginbutton.place(y=140,x=175)
 
@@ -222,6 +228,23 @@ ax = fig.add_subplot(111)
 ax.set_xlabel("aantal metingen")
 ax.get_xaxis().set_major_locator(MaxNLocator(integer=True))
 ax2 = ax.twinx()
+
+def g1Active():
+	grafiek1Knop.configure(fg_color="gray10")
+	grafiek2Knop.configure(fg_color="gray12")
+	
+def g2Active():
+	grafiek1Knop.configure(fg_color="gray12")
+	grafiek2Knop.configure(fg_color="gray10")
+
+
+grafiek1Knop = CTkButton(master=mainframe, text="grafiek 1",font=("roboto",18), width=400,height=40,fg_color="gray10", hover_color="gray10", command=g1Active)
+grafiek1Knop.place(x=940,y=600)
+
+grafiek2Knop = CTkButton(master=mainframe, text="grafiek 2",font=("roboto",18), width=400,height=40, fg_color="gray12", hover_color="gray10", command=g2Active)
+grafiek2Knop.place(x=1410,y=600)
+
+print(win.cget("fg_color"))
 
 # figuur plaatsen
 canvas = FigureCanvasTkAgg(fig, master=mainframe)
@@ -254,6 +277,8 @@ def grafiekConfig():
 			if arduinoAvailable:
 				oArray = np.array([])
 				coArray = np.array([])
+				hArray = np.array([])
+				tArray = np.array([])
 				x = np.array([])
 				oGraph, = ax.plot(x, oArray, color='red',label="zuurstof (%)")
 				coGraph, = ax2.plot(x, coArray, label="co2 (ppm)")
@@ -264,6 +289,11 @@ def grafiekConfig():
 				ax.set_xlabel("meting n")
 				ax.get_xaxis().set_major_locator(MaxNLocator(integer=True))
 				
+				for t in range(1,aantalMetingen+1):
+					if Ografiekcheck.get() == 1:
+						print("")
+						
+				"""
 				if gemetenvals.get() == "CO2 en O2":
 					for t in range(1,aantalMetingen+1):
 						newOval = float(O.cget("text").split("%")[0])
@@ -307,10 +337,10 @@ def grafiekConfig():
 						canvas.draw()
 						time.sleep(hoevaakMetingen)					
 					lst = [x,coArray]
+				"""
 				
 				
-				
-				bestandsnaam = time.strftime("%H%M%S",time.localtime())+".csv"
+				bestandsnaam = naamMeting.get()+".csv"
 				
 				total_rows = len(lst)
 				total_columns = len(lst[0])
@@ -345,7 +375,7 @@ def grafiekConfig():
 	Plotknopf.configure(state="disabled")
 	
 	# de popup
-	ConfigWindow = CTkFrame(master=win, height=300, width=500,border_color="white",border_width=1)
+	ConfigWindow = CTkFrame(master=win, height=400, width=500,border_color="white",border_width=1)
 	ConfigWindow.place(x=800,y=400)
 	cancelButn = CTkButton(master=ConfigWindow,text="X",fg_color="red",hover_color="#8b0000",height=10,width=30,command=closeGConfig)
 	cancelButn.place(x=5,y=15,anchor=W)
@@ -359,10 +389,6 @@ def grafiekConfig():
 	aantalnaam.place(y=110,x=30)
 	metingen = CTkEntry(master=ConfigWindow, placeholder_text="minimaal 1", width=150, height=30, font=("Roboto", 10))
 	metingen.place(y=140,x=30)
-	"""gemetenvalsnaam = CTkLabel(master=ConfigWindow, text="Welke gassen er op de grafiek moeten komen")
-	gemetenvalsnaam.place(y=170,x=30)
-	gemetenvals =  CTkOptionMenu(master=ConfigWindow, values=["CO2 en O2","O2","CO2"], width = 150, height=30)
-	gemetenvals.place(y=200,x=30)"""
 
 	Tabel1 = CTkLabel(master=ConfigWindow, text="Grafiek 1")
 	Tabel1.place(y=170,x=30)
@@ -370,12 +396,30 @@ def grafiekConfig():
 	Ografieknaam.place(y=200,x=30)
 	COgrafieknaam = CTkLabel(master=ConfigWindow,text="CO2 ppm")
 	COgrafieknaam.place(y=230,x=30)
-	Ografiekcheck = CTkSwitch(master=ConfigWindow)
+	Ografiekcheck = CTkSwitch(master=ConfigWindow, text="    Luchtvochtigheid %")
 	Ografiekcheck.place(y=200,x=175)
-	COgrafiekcheck=CTkSwitch(master=ConfigWindow)
+	COgrafiekcheck=CTkSwitch(master=ConfigWindow, text="    Temperatuur °C")
 	COgrafiekcheck.place(y=230,x=175)
-	toepasbtn = CTkButton(master=ConfigWindow, text="Start grafiek", command=InitiateGraph, width=150, height=20)
-	toepasbtn.place(y=260,x=175)
+	Tabel2 = CTkLabel(master=ConfigWindow, text="Grafiek 2")
+	Tabel2.place(y=170,x=230)
+	Hgrafiekcheck = CTkSwitch(master=ConfigWindow,text="", width=40)
+	Hgrafiekcheck.place(y=200,x=450)
+	Tgrafiekcheck = CTkSwitch(master=ConfigWindow,text="", width=40)
+	Tgrafiekcheck.place(y=230,x=450)
+	
+	CameraConfig = CTkLabel(master=ConfigWindow, text="camerainstellingen", font=("Roboto",15))
+	CameraConfig.place(y=260,x=30)
+	CamUTitel = CTkLabel(master=ConfigWindow,text="Opname camera")
+	CamUTitel.place(y=290,x=30)
+	CameraUberhaupt = CTkSwitch(master=ConfigWindow,text="", width=40)
+	CameraUberhaupt.place(y=292,x=175)
+	
+	naamMetingTitel = CTkLabel(master=ConfigWindow, text="Naam meting voor identificatie")
+	naamMetingTitel.place(y=320,x=30)
+	naamMeting = CTkEntry(master=ConfigWindow, placeholder_text="voeg naam in")
+	naamMeting.place(x=250, y=320)
+	toepasbtn = CTkButton(master=ConfigWindow, text="Start meting", command=InitiateGraph, width=150, height=20)
+	toepasbtn.place(y=360,x=175)
 
 # functie voor het bijwerken van de grafiek
 def update_graph():
@@ -477,7 +521,7 @@ toepasknopf= CTkButton(master=mainconfig,text="waarden toepassen", command=toepa
 toepasknopf.place(x=680,y=40,anchor=NW)
 
 # grafiek instellen knop
-Plotknopf = CTkButton(master=mainconfig, text="stel live grafiek in", command = grafiekConfig)
+Plotknopf = CTkButton(master=mainconfig, text="stel meting in", command = grafiekConfig)
 Plotknopf.place(x=680,y=70,anchor=NW)
 
 # ventileer knop
