@@ -244,8 +244,6 @@ grafiek1Knop.place(x=940,y=600)
 grafiek2Knop = CTkButton(master=mainframe, text="grafiek 2",font=("roboto",18), width=400,height=40, fg_color="gray12", hover_color="gray10", command=g2Active)
 grafiek2Knop.place(x=1410,y=600)
 
-print(win.cget("fg_color"))
-
 # figuur plaatsen
 canvas = FigureCanvasTkAgg(fig, master=mainframe)
 canvas.draw()

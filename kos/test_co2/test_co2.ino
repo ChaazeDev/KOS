@@ -64,7 +64,7 @@ void setup()
    pinMode(HRelay, OUTPUT);
   
    HumidServo.attach(HServo);
-   HumidServo.writeMicroseconds(1450);
+   HumidServo.writeMicroseconds(1400);
    pinMode(13,OUTPUT); //built in led
    digitalWrite(13,LOW);
 }
@@ -75,7 +75,7 @@ void loop()
 
     float humi = dht.readHumidity();
     float temp = dht.readTemperature();
-    
+
     float oxygenData = oxygen.getOxygenData(COLLECT_NUMBER);
 
     if(isnan(humi) || isnan(temp)){
@@ -128,9 +128,9 @@ void loop()
       
       if(not B.toInt() == BState){
         if(BState == 0){
-        digitalWrite(blauwRelay,HIGH);
+        digitalWrite(blauwRelay,LOW);
         }else if(BState == 1){
-          digitalWrite(blauwRelay,LOW);
+          digitalWrite(blauwRelay,HIGH);
         }
       }
       if(not R.toInt() == RState){
@@ -151,13 +151,13 @@ void loop()
 
       if(humi <=H.toFloat()-5 and not H.toFloat()== 0.00){
         digitalWrite(HRelay,HIGH);
-        HumidServo.writeMicroseconds(1450);
+        HumidServo.writeMicroseconds(1400);
       }else if(humi >=H.toFloat()+5 and not H.toFloat()== 0.00){
         digitalWrite(HRelay,LOW);
-        HumidServo.writeMicroseconds(0);
+        HumidServo.writeMicroseconds(2900);
       }else if(not H.toFloat() ==0.00){
         digitalWrite(HRelay,LOW);
-        HumidServo.writeMicroseconds(1450);
+        HumidServo.writeMicroseconds(1400);
       }
 
       if(temp <= T.toFloat()-2 and not T.toFloat() == 0.00){
