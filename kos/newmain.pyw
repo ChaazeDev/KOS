@@ -72,7 +72,6 @@ def toepas():
 			newco = int(round(float(targetCO.get()),4))
 			if not newco >=5001 and not newco <=999:
 				arduinoVals=("C"+str(newco))
-				print(arduinoVals)
 			else:
 				print("co fiale")
 				arduinoVals="C----"
@@ -97,7 +96,7 @@ def toepas():
 	try:
 		if not targetTemp.get() == "":
 			newtemp = round(float(targetTemp.get()),1)
-			if not newtemp <=4.9 and not newtemp >=30:
+			if not newtemp <=4.9 and not newtemp >30:
 				if newtemp <10:
 					arduinoVals+="T0"+str(newtemp)
 				else:
@@ -136,6 +135,7 @@ def toepas():
 	except:
 		print("B empty")
 		
+	print(arduinoVals)
 	package = arduinoVals +"V-\n"
 	ser.write(package.encode())
 

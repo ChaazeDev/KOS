@@ -62,6 +62,15 @@ void setup()
    pinMode(groenRelay, OUTPUT);
    pinMode(blauwRelay, OUTPUT);
    pinMode(HRelay, OUTPUT);
+
+   digitalWrite(ventileerRelay,LOW);
+   digitalWrite(CO2Relay,HIGH);
+   digitalWrite(heatRelay,HIGH);
+   digitalWrite(coolRelay,HIGH);
+   digitalWrite(roodRelay,LOW);
+   digitalWrite(groenRelay,LOW);
+   digitalWrite(blauwRelay,LOW);
+   digitalWrite(HRelay,HIGH);
   
    HumidServo.attach(HServo);
    HumidServo.writeMicroseconds(1400);
@@ -125,26 +134,30 @@ void loop()
       GState = digitalRead(groenRelay);
       RState = digitalRead(roodRelay);
       BState = digitalRead(blauwRelay);
+
       
-      if(not B.toInt() == BState){
-        if(BState == 0){
-        digitalWrite(blauwRelay,LOW);
-        }else if(BState == 1){
+     if(not BState == B.toInt()){
+        if(BState == 1){
+          digitalWrite(blauwRelay,LOW);
+        }else if(BState == 0){
           digitalWrite(blauwRelay,HIGH);
         }
-      }
+     
+     }
+
+      
       if(not R.toInt() == RState){
-        if(RState == 0){
-        digitalWrite(roodRelay,HIGH);
-        }else if(RState == 1){
-          digitalWrite(roodRelay,LOW);
+        if(RState == 1){
+        digitalWrite(roodRelay,LOW);
+        }else if(RState == 0){
+          digitalWrite(roodRelay,HIGH);
         }
       }
       if(not G.toInt() == GState){
-        if(GState == 0){
-        digitalWrite(groenRelay,HIGH);
-        }else if(GState == 1){
-          digitalWrite(groenRelay,LOW);
+        if(GState == 1){
+        digitalWrite(groenRelay,LOW);
+        }else if(GState == 0){
+          digitalWrite(groenRelay,HIGH);
         }
       }
 
