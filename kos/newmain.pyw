@@ -1,4 +1,4 @@
-#from gpiozero import CPUTemperature
+from gpiozero import CPUTemperature
 from tkinter import *
 from customtkinter import *
 from PIL import Image, ImageTk
@@ -13,6 +13,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import numpy as np
 import pandas as pd
 import json
+import os
 
 # verklaren van enkele variabelen die nodig zijn
 newr = 0
@@ -25,8 +26,9 @@ arduinoVals = ""
 
 
 # algemene systeeminformatie
-version = "KOS V1.0.1"
+version = "KOS V1.1"
 arduinoAvailable = True
+actieveGrafiek = 1
 
 # het openen van de beveiligingsdata
 f = open('C:/Users/cadek/Documents/GitHub/KOS/kos/Security.json')
@@ -71,7 +73,6 @@ def toepas():
 			newco = int(round(float(targetCO.get()),4))
 			if not newco >=5001 and not newco <=999:
 				arduinoVals=("C"+str(newco))
-				print(arduinoVals)
 			else:
 				print("co fiale")
 				arduinoVals="C----"
@@ -96,7 +97,7 @@ def toepas():
 	try:
 		if not targetTemp.get() == "":
 			newtemp = round(float(targetTemp.get()),1)
-			if not newtemp <=4.9 and not newtemp >=30:
+			if not newtemp <=4.9 and not newtemp >30:
 				if newtemp <10:
 					arduinoVals+="T0"+str(newtemp)
 				else:
@@ -134,8 +135,8 @@ def toepas():
 			Bo.configure(text="uit")
 	except:
 		print("B empty")
-	print(arduinoVals)
 		
+	print(arduinoVals)
 	package = arduinoVals +"V-\n"
 	ser.write(package.encode())
 
@@ -182,6 +183,10 @@ def rechtCheck():
             deAuthTread.start()
             authWindow.destroy()
             AantVentileren = 0
+          elif passw=="ongeldig": 
+             wwtext.configure(text="haha heel grappig")
+          else:
+             wwtext.configure(text="wachtwoord is ongeldig")
             
      
     loguitknopf.configure(state="disabled")
@@ -190,9 +195,11 @@ def rechtCheck():
     cancelButn = CTkButton(master=authWindow,text="X",fg_color="red",hover_color="#8b0000",height=10,width=30,command=closeAuth)
     cancelButn.place(x=5,y=15,anchor=W)
     label = CTkLabel(master=authWindow, text="Authorisatie vereist", font=("Roboto", 20))
-    label.place(y=20,x=175)
+    label.place(y=20,x=155)
     password = CTkEntry(master=authWindow, placeholder_text="Password", show="•", width=150, height=30, font=("Roboto", 10))
     password.place(y=100,x=175)
+    wwtext = CTkLabel(master=authWindow, text="", text_color="#FF5733")
+    wwtext.place(y=70,x=175)
     loginbutton = CTkButton(master=authWindow, text="Login", command=login, width=150, height=20)
     loginbutton.place(y=140,x=175)
 
@@ -223,6 +230,68 @@ ax.set_xlabel("aantal metingen")
 ax.get_xaxis().set_major_locator(MaxNLocator(integer=True))
 ax2 = ax.twinx()
 
+oArray = np.array([])
+coArray = np.array([])
+hArray = np.array([])
+tArray = np.array([])
+x = np.array([])
+
+ax.cla()
+ax2.cla()	
+oGraph, = ax.plot(x, oArray, color='red',label="zuurstof (%)")
+coGraph, = ax2.plot(x, coArray, label="co2 (ppm)")
+
+def g1Active():
+	global actieveGrafiek
+	actieveGrafiek = 1 
+	grafiek1Knop.configure(fg_color="gray10")
+	grafiek2Knop.configure(fg_color="gray12")
+	ax.cla()
+	ax2.cla()
+	oGraph, = ax.plot(x, oArray, color='red',label="zuurstof (%)")
+	coGraph, = ax2.plot(x, coArray, label="co2 (ppm)")
+	ax.relim()
+	ax2.relim()	
+	ax.legend(loc="upper left")	
+	ax2.legend(loc="upper right")
+	#ax.set_label("luchtvochtigheid (%)")
+	#ax2.set_label("temperatuur (°C)")
+	ax.autoscale_view()
+	ax2.autoscale_view()
+	canvas.draw()
+	
+def g2Active():
+	global actieveGrafiek
+	actieveGrafiek = 2
+	grafiek1Knop.configure(fg_color="gray12")
+	grafiek2Knop.configure(fg_color="gray10")
+	ax.cla()
+	ax2.cla()
+	oGraph, = ax.plot(x, hArray, color='red',label="luchtvochtigheid (%)")
+	coGraph, = ax2.plot(x, tArray, label="temperatuur (°C)")
+	oGraph.set_label("luchtvochtigheid (%)")
+	oGraph.set_data(x,hArray)
+	coGraph.set_label("temperatuur (°C)")
+	coGraph.set_data(x,tArray)
+	ax.relim()
+	ax2.relim()	
+	ax.legend(loc="upper left")	
+	ax2.legend(loc="upper right")
+	#ax.set_label("luchtvochtigheid (%)")
+	#ax2.set_label("temperatuur (°C)")
+	ax.autoscale_view()
+	ax2.autoscale_view()
+	canvas.draw()
+	ax.update({})
+	
+
+
+grafiek1Knop = CTkButton(master=mainframe, text="grafiek 1",font=("roboto",18), width=400,height=40,fg_color="gray10", hover_color="gray10", command=g1Active)
+grafiek1Knop.place(x=940,y=600)
+
+grafiek2Knop = CTkButton(master=mainframe, text="grafiek 2",font=("roboto",18), width=400,height=40, fg_color="gray12", hover_color="gray10", command=g2Active)
+grafiek2Knop.place(x=1410,y=600)
+
 # figuur plaatsen
 canvas = FigureCanvasTkAgg(fig, master=mainframe)
 canvas.draw()
@@ -243,108 +312,130 @@ def grafiekConfig():
 	
 	# grafiek starten en live bijwerken
 	def GraphStart():
-		try:
-			
-			ax.cla()
-			ax2.cla()
-			aantalMetingen = int(metingen.get())
-			hoevaakMetingen = int(freq.get())
-			ConfigWindow.destroy()
-			if arduinoAvailable:
-				oArray = np.array([])
-				coArray = np.array([])
-				x = np.array([])
-				oGraph, = ax.plot(x, oArray, color='red',label="zuurstof (%)")
-				coGraph, = ax2.plot(x, coArray, label="co2 (ppm)")
 
-				ax.legend(loc="upper left")	
-				ax2.legend(loc="upper right")
-					
-				ax.set_xlabel("meting n")
-				ax.get_xaxis().set_major_locator(MaxNLocator(integer=True))
-				
-				if gemetenvals.get() == "CO2 en O2":
-					for t in range(1,aantalMetingen+1):
-						newOval = float(O.cget("text").split("%")[0])
-						newCval = float(CO.cget("text").split(" ")[0])
-						oArray = np.append(oArray,newOval)
-						coArray = np.append(coArray, newCval)
-						x = np.append(x,t)
-						oGraph.set_data(x,oArray)
-						coGraph.set_data(x,coArray)
-						ax2.relim()
-						ax.relim()	
-						ax2.autoscale_view()
-						ax.autoscale_view()
-						canvas.draw()
-						time.sleep(hoevaakMetingen)					
-					lst = [x,oArray,coArray]
-				elif gemetenvals.get() == "O2":
-					for t in range(1,aantalMetingen+1):
-						newOval = float(O.cget("text").split("%")[0])
-						oArray = np.append(oArray,newOval)
-						x = np.append(x,t)
-						oGraph.set_data(x,oArray)
-						ax.relim()
-						ax2.relim()	
-						ax.autoscale_view()
-						ax2.autoscale_view()
-						canvas.draw()
-						time.sleep(hoevaakMetingen)					
-					lst = [x,oArray]
-					
-				elif gemetenvals.get() == "CO2":
-					for t in range(1,aantalMetingen+1):
-						newCval = float(CO.cget("text").split(" ")[0])
-						coArray = np.append(coArray, newCval)
-						x = np.append(x,t)
-						coGraph.set_data(x,coArray)
-						ax2.relim()
-						ax.relim()	
-						ax2.autoscale_view()
-						ax.autoscale_view()
-						canvas.draw()
-						time.sleep(hoevaakMetingen)					
-					lst = [x,coArray]
-				
-				
-				
-				bestandsnaam = time.strftime("%H%M%S",time.localtime())+".csv"
-
-				total_rows = len(lst)
-				total_columns = len(lst[0])
-				
-				tijdtussenmetingen.configure(text=F"Tijd tussen metingen: {str(hoevaakMetingen)} seconden.\nOpgeslagen als: {bestandsnaam}")
-				tijdtussenmetingen.grid(row=0,column=0)
-				for i in range(total_rows):
-					for j in range(total_columns):
-						e = CTkEntry(Tabelhierin, width=100,font=('Arial',16,'bold'))
-						e.grid(row=j+1, column=i) 
-						e.insert(END,lst[i][j])
+		
 						
-				arr = np.array((coArray,oArray))
+		ax.cla()
+		ax2.cla()
+		aantalMetingen = int(metingen.get())
+		hoevaakMetingen = int(freq.get())
+		bestandsnaam = naamMeting.get()+".csv"
 
+		meetO =Ografiekcheck.get()
+		meetCo = COgrafiekcheck.get()
+		meetH = Hgrafiekcheck.get()
+		meetT =Tgrafiekcheck.get()
 
+		ConfigWindow.destroy()
+		if arduinoAvailable:
+			global oArray
+			global coArray
+			global hArray
+			global tArray
+			global x
 
-				df = pd.DataFrame(arr)
-				df.to_csv(bestandsnaam,index=False,header=x)
+			oArray = np.array([])
+			coArray = np.array([])
+			hArray = np.array([])
+			tArray = np.array([])
+			x = np.array([])
 
-			Plotknopf.configure(state="normal")
+			oGraph, = ax.plot(x, oArray, color='red',label="zuurstof (%)")
+			coGraph, = ax2.plot(x, coArray, label="co2 (ppm)")
+
+			ax.legend(loc="upper left")	
+			ax2.legend(loc="upper right")
+					
+			ax.set_xlabel("meting n")
+			ax.get_xaxis().set_major_locator(MaxNLocator(integer=True))
 				
+			for t in range(1,aantalMetingen+1):
+				x = np.append(x,t)
+
+
+				if meetO == 1:
+					newOval = float(O.cget("text").split("%")[0])
+					oArray = np.append(oArray,newOval)
+
+					if actieveGrafiek == 1:
+						oGraph.set_data(x,oArray)
+	
+				if meetCo == 1:
+					newCval = float(CO.cget("text").split(" ")[0])
+					coArray = np.append(coArray, newCval)
+					if actieveGrafiek == 1:
+						coGraph.set_data(x,coArray)
+
+				if meetH == 1:
+					newHval = float(Humid.cget("text").split("%")[0])
+					hArray = np.append(hArray,newHval)
+					if actieveGrafiek == 2:
+						oGraph.set_data(x,hArray)
+
+				if meetT == 1:
+					newTval = float(temp.cget("text").split("°")[0])
+					tArray = np.append(tArray,newTval)
+					if actieveGrafiek == 2:
+						coGraph.set_data(x,tArray)
+				
+				lst = [x]
+				if meetO ==1: lst.append(oArray)
+				if meetCo ==1: lst.append(coArray)
+				if meetH ==1: lst.append(hArray)
+				if meetT ==1: lst.append(tArray)
+
+				ax.relim()
+				ax2.relim()	
+				ax.autoscale_view()
+				ax2.autoscale_view()
+				canvas.draw()
+			
+				time.sleep(hoevaakMetingen)	
+					
+				
+
+				
+			total_rows = len(lst)
+			total_columns = len(lst[0])
+			
+			tijdtussenmetingen.configure(text=F"Tijd tussen metingen: {str(hoevaakMetingen)} seconden.\nOpgeslagen als: {bestandsnaam}")
+			tijdtussenmetingen.grid(row=0,column=0)
+			for i in range(total_rows):
+				for j in range(total_columns):
+					e = CTkEntry(Tabelhierin, width=100,font=('Arial',16,'bold'))
+					e.grid(row=j+1, column=i) 
+					e.insert(END,lst[i][j])
+			arr = np.array([[]])
+			if meetO==1: arr = np.append(arr,oArray)
+			if meetCo ==1: arr = np.append(arr,coArray)
+			if meetH ==1: arr = np.append(arr,hArray)
+			if meetT ==1: arr = np.append(arr,tArray)	
+
+			arr = np.reshape(arr,(total_rows-1,total_columns))
+
+
+
+			df = pd.DataFrame(arr)
+			df.to_csv(f"C:/Users/cadek/Documents/{bestandsnaam}",index=False,header=x)
+				
+			os.system('python3 /home/pi/kos/genindex.py ~/metingen/files')
+
+		Plotknopf.configure(state="normal")
+		"""		
 		except:
 			Plotknopf.configure(state="normal")
 			erderetext = popuptext.cget("text")
-			popuptext.configure(text=erderetext+"\nEr is iets foutgegaan met het maken van de grafiek of tabel!")
+			popuptext.configure(text=erderetext+"\nEr is iets foutgegaan met het maken van de grafiek of tabel!")"""
 	
 	
 	Plotknopf.configure(state="disabled")
 	
 	# de popup
-	ConfigWindow = CTkFrame(master=win, height=300, width=500,border_color="white",border_width=1)
+	ConfigWindow = CTkFrame(master=win, height=400, width=500,border_color="white",border_width=1)
 	ConfigWindow.place(x=800,y=400)
 	cancelButn = CTkButton(master=ConfigWindow,text="X",fg_color="red",hover_color="#8b0000",height=10,width=30,command=closeGConfig)
 	cancelButn.place(x=5,y=15,anchor=W)
-	label = CTkLabel(master=ConfigWindow, text="Configureer grafiek", font=("Roboto", 20))
+	label = CTkLabel(master=ConfigWindow, text="Configureer meting", font=("Roboto", 20))
 	label.place(y=20,x=175)
 	freqnaam = CTkLabel(master=ConfigWindow, text="Hoeveel seconden er tussen een meting moet zitten")
 	freqnaam.place(y=50,x=30)
@@ -354,12 +445,37 @@ def grafiekConfig():
 	aantalnaam.place(y=110,x=30)
 	metingen = CTkEntry(master=ConfigWindow, placeholder_text="minimaal 1", width=150, height=30, font=("Roboto", 10))
 	metingen.place(y=140,x=30)
-	gemetenvalsnaam = CTkLabel(master=ConfigWindow, text="Welke gassen er op de grafiek moeten komen")
-	gemetenvalsnaam.place(y=170,x=30)
-	gemetenvals =  CTkOptionMenu(master=ConfigWindow, values=["CO2 en O2","O2","CO2"], width = 150, height=30)
-	gemetenvals.place(y=200,x=30)
-	toepasbtn = CTkButton(master=ConfigWindow, text="Start grafiek", command=InitiateGraph, width=150, height=20)
-	toepasbtn.place(y=260,x=175)
+
+	Tabel1 = CTkLabel(master=ConfigWindow, text="Grafiek 1")
+	Tabel1.place(y=170,x=30)
+	Ografieknaam = CTkLabel(master=ConfigWindow,text="Zuurstof %")
+	Ografieknaam.place(y=200,x=30)
+	COgrafieknaam = CTkLabel(master=ConfigWindow,text="CO2 ppm")
+	COgrafieknaam.place(y=230,x=30)
+	Ografiekcheck = CTkSwitch(master=ConfigWindow, text="    Luchtvochtigheid %")
+	Ografiekcheck.place(y=200,x=175)
+	COgrafiekcheck=CTkSwitch(master=ConfigWindow, text="    Temperatuur °C")
+	COgrafiekcheck.place(y=230,x=175)
+	Tabel2 = CTkLabel(master=ConfigWindow, text="Grafiek 2")
+	Tabel2.place(y=170,x=230)
+	Hgrafiekcheck = CTkSwitch(master=ConfigWindow,text="", width=40)
+	Hgrafiekcheck.place(y=200,x=450)
+	Tgrafiekcheck = CTkSwitch(master=ConfigWindow,text="", width=40)
+	Tgrafiekcheck.place(y=230,x=450)
+	
+	CameraConfig = CTkLabel(master=ConfigWindow, text="camerainstellingen", font=("Roboto",15))
+	CameraConfig.place(y=260,x=30)
+	CamUTitel = CTkLabel(master=ConfigWindow,text="Opname camera")
+	CamUTitel.place(y=290,x=30)
+	CameraUberhaupt = CTkSwitch(master=ConfigWindow,text="", width=40)
+	CameraUberhaupt.place(y=292,x=175)
+	
+	naamMetingTitel = CTkLabel(master=ConfigWindow, text="Naam meting voor identificatie")
+	naamMetingTitel.place(y=320,x=30)
+	naamMeting = CTkEntry(master=ConfigWindow, placeholder_text="voeg naam in")
+	naamMeting.place(x=250, y=320)
+	toepasbtn = CTkButton(master=ConfigWindow, text="Start meting", command=InitiateGraph, width=150, height=20)
+	toepasbtn.place(y=360,x=175)
 
 # functie voor het bijwerken van de grafiek
 def update_graph():
@@ -445,7 +561,7 @@ Coreheat = CTkLabel(master=mainconfig, text="PI CPU temp:")
 Coreheat.place(x=1700, y=30, anchor=W)
 
 # gemeten pi cpu temperatuur
-CoreHeatVal = CTkLabel(master=mainconfig, text="ERROR!", text_color="#FF5733")
+CoreHeatVal = CTkLabel(master=mainconfig, text="ERROR!", text_color="white")
 CoreHeatVal.place(x=1800, y=30, anchor=W)
 
 # knop voor de output wissen
@@ -461,7 +577,7 @@ toepasknopf= CTkButton(master=mainconfig,text="waarden toepassen", command=toepa
 toepasknopf.place(x=680,y=40,anchor=NW)
 
 # grafiek instellen knop
-Plotknopf = CTkButton(master=mainconfig, text="stel live grafiek in", command = grafiekConfig)
+Plotknopf = CTkButton(master=mainconfig, text="stel meting in", command = grafiekConfig)
 Plotknopf.place(x=680,y=70,anchor=NW)
 
 # ventileer knop
@@ -523,25 +639,32 @@ def show_frames():
 
 # gelezen waarden bijwerken functie
 def update_values():
-    time.sleep(5)
+    raspberrypicoretemperature = 65#round(CPUTemperature().temperature,1)
+    CoreHeatVal.configure(text=str(raspberrypicoretemperature)+"°C")
+    time.sleep(8)
     if arduinoAvailable:
-        CoreHeatVal.configure(text_color="#f2f3f4")
         while True:
-            raspberrypicoretemperature = 60#round(CPUTemperature().temperature)
-            CoreHeatVal.configure(text=str(raspberrypicoretemperature)+"°C")
             time.sleep(1)
+            
+            if raspberrypicoretemperature >= 65:
+                CoreHeatVal.configure(text_color="#FF5733")
+            else:
+                CoreHeatVal.configure(text_color="white")
+            
             dataStr = write_read("")
             ProcessedData = list(dataStr)
             try: 
                 oxygi = ProcessedData[13]+ProcessedData[14]+ProcessedData[15]+ProcessedData[16]+ProcessedData[17]
                 tempi = ProcessedData[7]+ProcessedData[8]+ProcessedData[9]+ProcessedData[10]+ProcessedData[11]+"°C"
                 humidi = ProcessedData[1]+ProcessedData[2]+ProcessedData[3]+ProcessedData[4]+ProcessedData[5]+"%"
-                coi = ProcessedData[19]+ProcessedData[20]+ProcessedData[21]+ProcessedData[22]
+                if not ProcessedData[19] == "0":
+                    coi = ProcessedData[19]+ProcessedData[20]+ProcessedData[21]+ProcessedData[22]
+                else:
+                     coi = ProcessedData[20]+ProcessedData[21]+ProcessedData[22]
                 O.configure(text=oxygi+"%")
                 temp.configure(text=tempi)
                 Humid.configure(text=humidi)
                 CO.configure(text=coi+" ppm")
-                print(ProcessedData)
             except:
                  oldtext = popuptext.cget("text")
                  popuptext.configure(text=oldtext+"\nSensor error")
@@ -556,7 +679,9 @@ def update_values():
 	                
     else:
         popuptext.configure(text="Arduino verbinding onstabiel of anders onbruikbaar")
-
+        raspberrypicoretemperature = round(CPUTemperature().temperature)
+        CoreHeatVal.configure(text=str(raspberrypicoretemperature)+"°C")
+        
 
 # thread (meerdere dingen tegelijk in een cpu) starten voor waarden bijwerken
 varThread = threading.Thread(target=update_values, daemon=True)

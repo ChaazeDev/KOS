@@ -63,8 +63,19 @@ void setup()
    pinMode(blauwRelay, OUTPUT);
    pinMode(HRelay, OUTPUT);
 
+   digitalWrite(ventileerRelay,LOW);
+   digitalWrite(CO2Relay,HIGH);
+   digitalWrite(heatRelay,HIGH);
+   digitalWrite(coolRelay,HIGH);
+   digitalWrite(roodRelay,LOW);
+   digitalWrite(groenRelay,LOW);
+   digitalWrite(blauwRelay,LOW);
+   digitalWrite(HRelay,HIGH);
+  
    HumidServo.attach(HServo);
-   HumidServo.write(85);
+   HumidServo.writeMicroseconds(1400);
+   pinMode(13,OUTPUT); //built in led
+   digitalWrite(13,LOW);
 }
 
 void loop()
@@ -73,7 +84,7 @@ void loop()
 
     float humi = dht.readHumidity();
     float temp = dht.readTemperature();
-    
+
     float oxygenData = oxygen.getOxygenData(COLLECT_NUMBER);
 
     if(isnan(humi) || isnan(temp)){
@@ -100,8 +111,12 @@ void loop()
     Serial.print("O");
     Serial.print(oxygenData);                          // Request CO2 (as ppm)
         
-    Serial.print("C");                      
+    Serial.print("C");    
+    if(CO2<1000){
+         Serial.println("0"+String((CO2)));                  
+    }else{
     Serial.println(CO2);  
+    }
 
     char data[50];
     if (Serial.available() > 0){
@@ -119,39 +134,43 @@ void loop()
       GState = digitalRead(groenRelay);
       RState = digitalRead(roodRelay);
       BState = digitalRead(blauwRelay);
+
       
-      if(not B.toInt() == BState){
-        if(BState == 0){
-        digitalWrite(blauwRelay,HIGH);
-        }else if(BState == 1){
+     if(not BState == B.toInt()){
+        if(BState == 1){
           digitalWrite(blauwRelay,LOW);
+        }else if(BState == 0){
+          digitalWrite(blauwRelay,HIGH);
         }
-      }
+     
+     }
+
+      
       if(not R.toInt() == RState){
-        if(RState == 0){
-        digitalWrite(roodRelay,HIGH);
-        }else if(RState == 1){
-          digitalWrite(roodRelay,LOW);
+        if(RState == 1){
+        digitalWrite(roodRelay,LOW);
+        }else if(RState == 0){
+          digitalWrite(roodRelay,HIGH);
         }
       }
       if(not G.toInt() == GState){
-        if(GState == 0){
-        digitalWrite(groenRelay,HIGH);
-        }else if(GState == 1){
-          digitalWrite(groenRelay,LOW);
+        if(GState == 1){
+        digitalWrite(groenRelay,LOW);
+        }else if(GState == 0){
+          digitalWrite(groenRelay,HIGH);
         }
       }
 
 
       if(humi <=H.toFloat()-5 and not H.toFloat()== 0.00){
         digitalWrite(HRelay,HIGH);
-        HumidServo.write(85);
+        HumidServo.writeMicroseconds(1400);
       }else if(humi >=H.toFloat()+5 and not H.toFloat()== 0.00){
         digitalWrite(HRelay,LOW);
-        HumidServo.write(0);
+        HumidServo.writeMicroseconds(2900);
       }else if(not H.toFloat() ==0.00){
         digitalWrite(HRelay,LOW);
-        HumidServo.write(85);
+        HumidServo.writeMicroseconds(1400);
       }
 
       if(temp <= T.toFloat()-2 and not T.toFloat() == 0.00){
@@ -177,15 +196,21 @@ void loop()
      }
 
     }
-    if(ventileren=true){
+    if(ventileren==true){
       if(oxygenData >=19 and CO2 <= 2000){
         ventileren=false;
         digitalWrite(ventileerRelay,HIGH);
+        digitalWrite(13,LOW);
       }else if(oxygenData <=18.9 or CO2 >=1999.9 ){
         digitalWrite(ventileerRelay,LOW);
+        digitalWrite(13,HIGH);
       }
       digitalWrite(ventileerRelay,LOW);
-    }else if(ventileren=false){
+      digitalWrite(13,HIGH);
+    }else if(ventileren==false){
       digitalWrite(ventileerRelay,HIGH);
+              digitalWrite(13,LOW);
     }
+
+    
 }
