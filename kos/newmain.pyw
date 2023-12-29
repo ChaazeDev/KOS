@@ -268,7 +268,7 @@ def g2Active():
 	ax.cla()
 	ax2.cla()
 	oGraph, = ax.plot(x, hArray, color='red',label="luchtvochtigheid (%)")
-	coGraph, = ax2.plot(x, tArray, label="temperatuur (°C)")
+	coGraph, = ax2.plot(x, tArray,color='blue', label="temperatuur (°C)")
 	oGraph.set_label("luchtvochtigheid (%)")
 	oGraph.set_data(x,hArray)
 	coGraph.set_label("temperatuur (°C)")
@@ -282,7 +282,6 @@ def g2Active():
 	ax.autoscale_view()
 	ax2.autoscale_view()
 	canvas.draw()
-	ax.update({})
 	
 
 
@@ -340,16 +339,10 @@ def grafiekConfig():
 			tArray = np.array([])
 			x = np.array([])
 
-			oGraph, = ax.plot(x, oArray, color='red',label="zuurstof (%)")
-			coGraph, = ax2.plot(x, coArray, label="co2 (ppm)")
 
-			ax.legend(loc="upper left")	
-			ax2.legend(loc="upper right")
-					
-			ax.set_xlabel("meting n")
-			ax.get_xaxis().set_major_locator(MaxNLocator(integer=True))
-				
 			for t in range(1,aantalMetingen+1):
+				ax.cla()
+				ax2.cla()
 				x = np.append(x,t)
 
 
@@ -358,25 +351,35 @@ def grafiekConfig():
 					oArray = np.append(oArray,newOval)
 
 					if actieveGrafiek == 1:
+						oGraph, = ax.plot(x, oArray, color='red',label="zuurstof (%)")
 						oGraph.set_data(x,oArray)
 	
 				if meetCo == 1:
 					newCval = float(CO.cget("text").split(" ")[0])
 					coArray = np.append(coArray, newCval)
 					if actieveGrafiek == 1:
+						coGraph, = ax2.plot(x, coArray,color='blue', label="co2 (ppm)")
 						coGraph.set_data(x,coArray)
 
 				if meetH == 1:
 					newHval = float(Humid.cget("text").split("%")[0])
 					hArray = np.append(hArray,newHval)
 					if actieveGrafiek == 2:
+						oGraph, = ax.plot(x, hArray, color='red',label="luchtvochtigheid (%)")
 						oGraph.set_data(x,hArray)
 
 				if meetT == 1:
 					newTval = float(temp.cget("text").split("°")[0])
 					tArray = np.append(tArray,newTval)
 					if actieveGrafiek == 2:
+						coGraph, = ax2.plot(x, tArray,color='blue', label="temperatuur (°C)")
 						coGraph.set_data(x,tArray)
+				
+				ax.legend(loc="upper left")	
+				ax2.legend(loc="upper right")
+					
+				ax.set_xlabel("meting n")
+				ax.get_xaxis().set_major_locator(MaxNLocator(integer=True))
 				
 				lst = [x]
 				if meetO ==1: lst.append(oArray)
@@ -391,6 +394,7 @@ def grafiekConfig():
 				canvas.draw()
 			
 				time.sleep(hoevaakMetingen)	
+				
 					
 				
 
