@@ -254,8 +254,7 @@ def g1Active():
 	ax2.relim()	
 	ax.legend(loc="upper left")	
 	ax2.legend(loc="upper right")
-	#ax.set_label("luchtvochtigheid (%)")
-	#ax2.set_label("temperatuur (°C)")
+	ax.get_xaxis().set_major_locator(MaxNLocator(integer=True))
 	ax.autoscale_view()
 	ax2.autoscale_view()
 	canvas.draw()
@@ -277,8 +276,7 @@ def g2Active():
 	ax2.relim()	
 	ax.legend(loc="upper left")	
 	ax2.legend(loc="upper right")
-	#ax.set_label("luchtvochtigheid (%)")
-	#ax2.set_label("temperatuur (°C)")
+	ax.get_xaxis().set_major_locator(MaxNLocator(integer=True))
 	ax.autoscale_view()
 	ax2.autoscale_view()
 	canvas.draw()
@@ -308,6 +306,8 @@ def grafiekConfig():
 	def InitiateGraph():
 		plotThread = threading.Thread(target=GraphStart, daemon=True)
 		plotThread.start()
+		timelapseThread = threading.Thread(target=timelapseStart, daemon=True)
+		timelapseThread.start()
 	
 	# grafiek starten en live bijwerken
 	def GraphStart():
@@ -318,6 +318,7 @@ def grafiekConfig():
 		ax2.cla()
 		aantalMetingen = int(metingen.get())
 		hoevaakMetingen = int(freq.get())
+		global bestandsnaam
 		bestandsnaam = naamMeting.get()+".csv"
 
 		meetO =Ografiekcheck.get()
@@ -392,7 +393,7 @@ def grafiekConfig():
 				ax.autoscale_view()
 				ax2.autoscale_view()
 				canvas.draw()
-			
+		
 				time.sleep(hoevaakMetingen)	
 				
 					
@@ -431,6 +432,30 @@ def grafiekConfig():
 			erderetext = popuptext.cget("text")
 			popuptext.configure(text=erderetext+"\nEr is iets foutgegaan met het maken van de grafiek of tabel!")"""
 	
+	def timelapseStart():
+		if not CameraUberhaupt.get() == 1:
+			return
+		global cv2image
+
+		totalTime = int(metingen.get())*int(freq.get())
+		fps = 30
+
+		
+
+		if totalTime <=3600: secInterval = 5
+		elif totalTime <=86400: secInterval = 120
+		else: secInterval = 240
+
+		numPhotos = int((totalTime)/secInterval)
+
+		# verwijder mogelijke oude foto's van vroegere timelapses
+		os.system("rm /home/pi/Pictures/*.jpg")
+
+		for i in range(numPhotos):
+			cv2.imwrite(f'/home/pi/Pictures/{i}.png',cv2image)
+			time.sleep(secInterval)
+
+		os.system(f'ffmpeg -r {fps} -f image2 -s 1024x768 -nostats -loglevel 0 -pattern_type glob -i "/home/pi/Pictures/*.jpg" -vcodec libx264 -crf 25  -pix_fmt yuv420p ~/metingen/files/snapshots/{bestandsnaam}.mp4')
 	
 	Plotknopf.configure(state="disabled")
 	
@@ -630,6 +655,7 @@ Bv.place(x=420,y=190,anchor=NW)
 
 # camera feed verversen functie
 def show_frames():
+    global cv2image
     cv2image = cv2.cvtColor(cap.read()[1], cv2.COLOR_BGR2RGB)
     img = cv2.rotate(cv2image, cv2.ROTATE_90_CLOCKWISE)
     img = cv2.rotate(img, cv2.ROTATE_90_COUNTERCLOCKWISE)
