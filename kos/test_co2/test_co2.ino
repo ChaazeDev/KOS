@@ -45,7 +45,7 @@ boolean ventileren = false;
 
 void setup()
 {
-    Serial.begin(9600); // Device to serial monitor feedback
+    Serial.begin(9600);
     Serial1.begin(9600);
     myMHZ19.begin(Serial1);
     myMHZ19.autoCalibration(true);
@@ -63,6 +63,7 @@ void setup()
    pinMode(blauwRelay, OUTPUT);
    pinMode(HRelay, OUTPUT);
 
+    //default opstelling: Ventileer uit, co2 dicht, warmtemat uit, rgb uit, luchtvochtigheid ook uit, niet alles zelfde setup
    digitalWrite(ventileerRelay,LOW);
    digitalWrite(CO2Relay,HIGH);
    digitalWrite(heatRelay,HIGH);
@@ -136,23 +137,21 @@ void loop()
       BState = digitalRead(blauwRelay);
 
       
+      //RGB verandert alleen bij toegepaste waarden, in de SerialAvailable statement
      if(not BState == B.toInt()){
         if(BState == 1){
           digitalWrite(blauwRelay,LOW);
         }else if(BState == 0){
           digitalWrite(blauwRelay,HIGH);
-        }
-     
-     }
-
+        }}
       
       if(not R.toInt() == RState){
         if(RState == 1){
         digitalWrite(roodRelay,LOW);
         }else if(RState == 0){
           digitalWrite(roodRelay,HIGH);
-        }
-      }
+        }}
+
       if(not G.toInt() == GState){
         if(GState == 1){
         digitalWrite(groenRelay,LOW);
@@ -161,7 +160,21 @@ void loop()
         }
       }
 
+    //ventileren alleen bij externe input switchen
+    if(V == "-"){
+    }else{
+     if(V.toInt() == 1){
+      ventileren=true;
+     }else if(V.toInt() == 0){
+      ventileren=false;
+     }else{
+      // do stuf
+     }
 
+    }
+}//einde van externe input statment
+
+  
       if(humi <=H.toFloat()-5 and not H.toFloat()== 0.00){
         digitalWrite(HRelay,HIGH);
         HumidServo.writeMicroseconds(1400);
@@ -185,17 +198,17 @@ void loop()
       }
      } 
 
-    if(V == "-"){
-    }else{
-     if(V.toInt() == 1){
-      ventileren=true;
-     }else if(V.toInt() == 0){
-      ventileren=false;
-     }else{
-      // do stuf
-     }
-
+    if(CO2 <= C.toFloat()-100 and not C.toFloat()==0.00){
+      digitalWrite(CO2Relay,LOW);
+      digitalWrite(ventileerRelay,HIGH);
+    }else if(CO2 >=C.toFloat()+100 and not C.toFloat()==0.00){
+      digitalWrite(CO2Relay,HIGH);
+      digitalWrite(ventileerRelay,LOW);
+    }else if(not C.toFloat() ==0.00){
+      digitalWrite(CO2Relay,HIGH);
+      digitalWrite(ventileerRelay,HIGH)
     }
+
     if(ventileren==true){
       if(oxygenData >=19 and CO2 <= 2000){
         ventileren=false;
@@ -209,8 +222,6 @@ void loop()
       digitalWrite(13,HIGH);
     }else if(ventileren==false){
       digitalWrite(ventileerRelay,HIGH);
-              digitalWrite(13,LOW);
+      digitalWrite(13,LOW);
     }
-
-    
 }
