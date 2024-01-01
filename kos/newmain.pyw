@@ -14,6 +14,7 @@ import numpy as np
 import pandas as pd
 import json
 import os
+import psutil
 
 # verklaren van enkele variabelen die nodig zijn
 newr = 0
@@ -50,23 +51,20 @@ set_default_color_theme("dark-blue")  # Themes: blue (default), dark-blue, green
 def ventileerAlles():
 	package= "C----H----T----R-G-B-V1\n"
 	ser.write(package.encode())
-	erderetext = popuptext.cget("text")
-	popuptext.configure(text=erderetext+"\nVentilering in uitvoering, even geduld a.u.b... ")
+	LOG("Ventilering in uitvoering, even geduld a.u.b... ")
 	ventknop.configure(text="annuleer ventileren", fg_color="red", hover_color = "darkred",command=annuleerVentileer)
 
 # functie voor het annuleren van het ventileren	
 def annuleerVentileer():
 	package= "C----H----T----R-G-B-V0\n"
 	ser.write(package.encode())
-	erderetext = popuptext.cget("text")
-	popuptext.configure(text=erderetext+"\nVentilering geannuleerd!")
+	LOG("Ventilering geannuleerd!")
 	ventknop.configure(text="ventileer", fg_color="#1f538d", hover_color = "#14375e",command=ventileerAlles)
 
 # functie voor het toepassen van ingevulde waarden
 def toepas():
 	if ventknop.cget("fg_color") == "red":
-		erderetext = popuptext.cget("text")
-		popuptext.configure(text=erderetext+"\nKan waarden niet toepassen tijdens het ventileren!\nAnnuleer het ventileringsproces om waarden toe te passen.")
+		ERR("Waarden konden niet toegepast worden. (0xc002)")
 		return
 	try:
 		if not targetCO.get() == "": 
@@ -282,6 +280,13 @@ def g2Active():
 	canvas.draw()
 	
 
+def ERR(msg):
+	errorMessage = CTkLabel(master=popuptext,text=msg,text_color="#FF5733",height=20)
+	errorMessage.grid(pady=0,padx=0)
+
+def LOG(msg):
+	logMessage = CTkLabel(master=popuptext,text=msg,height=20)
+	logMessage.grid(pady=0,padx=0)
 
 grafiek1Knop = CTkButton(master=mainframe, text="grafiek 1",font=("roboto",18), width=400,height=40,fg_color="gray10", hover_color="gray10", command=g1Active)
 grafiek1Knop.place(x=940,y=600)
@@ -426,17 +431,15 @@ def grafiekConfig():
 			os.system('python3 /home/pi/kos/genindex.py ~/metingen/files')
 
 		Plotknopf.configure(state="normal")
-		"""		
-		except:
-			Plotknopf.configure(state="normal")
-			erderetext = popuptext.cget("text")
-			popuptext.configure(text=erderetext+"\nEr is iets foutgegaan met het maken van de grafiek of tabel!")"""
 	
 	def timelapseStart():
+		global GBfree
 		if not CameraUberhaupt.get() == 1:
 			return
 		global cv2image
-
+		if GBfree <=1:
+			ERR("Timlapse niet gestart. (0xc001)")
+			return
 		totalTime = int(metingen.get())*int(freq.get())
 		fps = 30
 
@@ -516,7 +519,8 @@ def update_graph():
 			
 # functie voor het wissen van de output
 def clearOutput():
-	popuptext.configure(text="")
+	for msg in popuptext.winfo_children():
+		msg.destroy()
 	for widgets in Tabelhierin.winfo_children():
 		widgets.destroy()
 	Tabelhierin.destroy()
@@ -592,6 +596,9 @@ Coreheat.place(x=1700, y=30, anchor=W)
 # gemeten pi cpu temperatuur
 CoreHeatVal = CTkLabel(master=mainconfig, text="ERROR!", text_color="white")
 CoreHeatVal.place(x=1800, y=30, anchor=W)
+
+storageLeft = CTkLabel(master=mainconfig, text="[NaN] GB opslag over", text_color="grey")
+storageLeft.place(x=1700,y=300,anchor=W)
 
 # knop voor de output wissen
 ClearOutputbtn =CTkButton(master=mainconfig,text="verwijder alle output", command = clearOutput)
@@ -671,11 +678,15 @@ def show_frames():
 def update_values():
     raspberrypicoretemperature = 65#round(CPUTemperature().temperature,1)
     CoreHeatVal.configure(text=str(raspberrypicoretemperature)+"°C")
+    bytes_avail = psutil.disk_usage('/').free
+    global GBfree
+    GBfree = bytes_avail / 1024 / 1024 / 1024
     time.sleep(8)
     if arduinoAvailable:
         while True:
             time.sleep(1)
-            
+            storageLeft.configure(text=f"{round(float(GBfree),2)} GB opslag over",text_color="grey") if float(GBfree) >1 else storageLeft.configure(text=f"{round(float(GBfree),2)} GB opslag over",text_color="#FF5733")
+
             if raspberrypicoretemperature >= 65:
                 CoreHeatVal.configure(text_color="#FF5733")
             else:
@@ -696,22 +707,20 @@ def update_values():
                 Humid.configure(text=humidi)
                 CO.configure(text=coi+" ppm")
             except:
-                 oldtext = popuptext.cget("text")
-                 popuptext.configure(text=oldtext+"\nSensor error")
+                 ERR("Fout bij het lezen van sensorwaarden. (0xc003)")
                  print(ProcessedData)
                  print(dataStr)
             if float(oxygi) >=19 and float(coi)<=2000 and ventknop.cget('fg_color') == "red":
                 package= "C----H----T----R-G-B-V0\n"
                 ser.write(package.encode())
-                erderetext = popuptext.cget("text")
-                popuptext.configure(text=erderetext+"\nVentilering succesvol!")
+                LOG("Ventilering succesvol!")
                 ventknop.configure(text="ventileer", fg_color="#1f538d", hover_color = "#14375e",command=ventileerAlles)
 	                
     else:
-        popuptext.configure(text="Arduino verbinding onstabiel of anders onbruikbaar")
-        raspberrypicoretemperature = round(CPUTemperature().temperature)
+        ERR("Arduino verbinding onstabiel of anders onbruikbaar. (0xc004)")
+        raspberrypicoretemperature = 65#round(CPUTemperature().temperature)
         CoreHeatVal.configure(text=str(raspberrypicoretemperature)+"°C")
-        
+    storageLeft.configure(text=f"{round(float(GBfree),2)} GB opslag over",text_color="grey") if float(GBfree) >1 else storageLeft.configure(text=f"{round(float(GBfree),2)} GB opslag over",text_color="#FF5733")
 
 # thread (meerdere dingen tegelijk in een cpu) starten voor waarden bijwerken
 varThread = threading.Thread(target=update_values, daemon=True)
