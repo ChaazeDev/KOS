@@ -3,7 +3,7 @@ from os import system
 import datetime
 from time import sleep
 
-tlminutes = 10 #set this to the number of minutes you wish to run your timelapse camera
+tlminutes = 2 #set this to the number of minutes you wish to run your timelapse camera
 secondsinterval = 1 #number of seconds delay between each photo taken
 fps = 30 #frames per second timelapse video
 numphotos = int((tlminutes*60)/secondsinterval) #number of photos to take
