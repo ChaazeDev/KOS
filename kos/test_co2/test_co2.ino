@@ -8,6 +8,7 @@
 //configuratie relay nrs en die ene servo
 
 #define lichtRelay 40
+#define HServo 39
 #define roodRelay 38
 #define groenRelay 37
 #define blauwRelay 36
@@ -16,7 +17,7 @@
 #define CO2Relay 33
 #define heatRelay 32
 #define coolRelay 31
-#define HServo 39
+
 
 #include "DFRobot_OxygenSensor.h"                        
 MHZ19 myMHZ19;    
