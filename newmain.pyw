@@ -38,6 +38,7 @@ logindata = json.load(f)
 # probeer een verbinding met de arduino aan te gaan, anders foutmelding.
 try:
     ser = serial.Serial('/dev/ttyUSB0', 19200, timeout=1) #USB0 of ATM0
+    ser.reset_input_buffer()
 except:
     arduinoAvailable = False
 
@@ -48,14 +49,14 @@ set_default_color_theme("dark-blue")  # Themes: blue (default), dark-blue, green
 
 # functie voor het ventileren
 def ventileerAlles():
-	package= "C----H----T----R-G-B-V1\n"
+	package= "C----H----T----R0G0B0L0V1\n"
 	ser.write(package.encode())
 	LOG("Ventilering in uitvoering, even geduld a.u.b... ")
 	ventknop.configure(text="annuleer ventileren", fg_color="red", hover_color = "darkred",command=annuleerVentileer)
 
 # functie voor het annuleren van het ventileren	
 def annuleerVentileer():
-	package= "C----H----T----R-G-B-V0\n"
+	package= "C----H----T----R-G-B-L0V0\n"
 	ser.write(package.encode())
 	LOG("Ventilering geannuleerd!")
 	ventknop.configure(text="ventileer", fg_color="#1f538d", hover_color = "#14375e",command=ventileerAlles)
@@ -65,19 +66,23 @@ def toepas():
 	if ventknop.cget("fg_color") == "red":
 		ERR("Waarden konden niet toegepast worden. (0xc002)")
 		return
-	try:
-		if not targetCO.get() == "": 
-			newco = int(round(float(targetCO.get()),4))
-			if not newco >=5001 and not newco <=999:
-				arduinoVals=("C"+str(newco))
+	
+	if not targetCO.get() == "": 
+		newco = int(round(float(targetCO.get()),4))
+		if not newco >=5001 and not newco <=350:
+			if newco <= 999:
+				arduinoVals=("C0"+str(newco))
 			else:
-				ERR("Ongeldige waarde voor CO2!")
-				arduinoVals="C----"
+				arduinoVals=("C"+str(newco))
 		else:
+			print(newco)
+			ERR("Ongeldige waarde voor CO2!")
 			arduinoVals="C----"
-	except:
-		print("co empty")
+	else:
 		arduinoVals="C----"
+	#except:
+		#print("co empty")
+		#arduinoVals="C----"
 	try:
 		if not targetHumid.get() == "":		
 			newhumid = round(float(targetHumid.get()),1)
@@ -101,9 +106,10 @@ def toepas():
 					arduinoVals+="T"+str(newtemp)
 			else:
 				arduinoVals+="T----"
+				ERR("Ongeldige waarde voor temperatuur!")
 		else:
 			arduinoVals+="T----"
-			ERR("Ongeldige waarde voor temperatuur!")
+			
 	except:
 		arduinoVals+="T----"
 	try:
@@ -135,7 +141,7 @@ def toepas():
 		print("B empty")
 		
 	print(arduinoVals)
-	package = arduinoVals +"V-\n"
+	package = arduinoVals +"L-V-\n"
 	ser.write(package.encode())
 
 # verlies de rechten na 5 minuten
@@ -150,6 +156,8 @@ def deAuth():
   Rv.configure(state="disabled")  
   loguitknopf.configure(state="normal")
   ventknop.configure(state="disabled")
+  lichtknop.configure(state="disabled")
+  cacl.configure(state="disabled")
 
 # popup login en login handelen
 def rechtCheck():
@@ -171,15 +179,17 @@ def rechtCheck():
             Bv.configure(state="normal")
             Gv.configure(state="normal")
             Rv.configure(state="normal")  
-            ventknop.configure(state="normal")                                  
+            ventknop.configure(state="normal")  
+            lichtknop.configure(state="normal")
+            cacl.configure(state="normal")                                
             deAuthTread = threading.Thread(target=deAuth, daemon=True)
             deAuthTread.start()
             authWindow.destroy()
             AantVentileren = 0
-          elif passw=="ongeldig": 
+          elif passw=="onjuist": 
              wwtext.configure(text="haha heel grappig")
           else:
-             wwtext.configure(text="wachtwoord is ongeldig")
+             wwtext.configure(text="wachtwoord is onjuist")
             
      
     loguitknopf.configure(state="disabled")
@@ -197,6 +207,154 @@ def rechtCheck():
     loginbutton.place(y=140,x=175)
 
 
+def lichtConfig():
+	lichtknop.configure(state="disabled")
+	def closeWin():
+		lichtframe.destroy()
+		lichtknop.configure(state="normal")
+	
+	def startLicht():
+		
+		global C1
+		global C2
+		global C3
+		try:
+			C1 = round(float(dagOver.get()))
+			C2 = round(float(nachtUren.get()))
+			C3 = round(float(dagUren.get()))
+			if not C1 < C3:
+				ERR("Het aantal minuten over in een dag kan niet groter zijn dan het totale aantal minuten in een dag!")
+				return
+		except:
+			print("eyy lmao")
+		closeWin()
+		global choice
+		choice = lichtModus.get()
+				
+		lichtknop.configure(text="Breek lichtcyclus af", fg_color="red",hover_color="#8b0000", command=abortLicht)
+		if choice == "Aan":
+			lichtStatus2.configure(text="∞ minuten")
+			LOG("Lichtcyclus gestart [Mode: aan]")
+			lichtStatus1.configure(text="aan")
+			package= "C----H----T----R-G-B-L1V-\n"
+			ser.write(package.encode())
+
+		elif choice == "Uit":
+			lichtStatus2.configure(text="∞ minuten")
+			LOG("Lichtcyclus gestart [Mode: uit]")
+			lichtStatus1.configure(text="uit")
+			package= "C----H----T----R-G-B-L0V-\n"
+			ser.write(package.encode())
+		else:
+			LOG(f"Lichtcyclus gestart [Mode: Cyclus, Dag over: {C1} minuten, Duur nacht: {C2} minuten, Duur dag: {C3} minuten]")
+			package= "C----H----T----R-G-B-L1V-\n"
+			ser.write(package.encode())
+			global currentLightState
+			if not int(C1)==0: 
+				lichtStatus1.configure(text="aan") 
+				lichtStatus2.configure(text=f"{C1} minuten")
+				currentLightState=1
+			else: 
+				lichtStatus1.configure(text="uit")
+				lichtStatus2.configure(text=f"{C2} minuten")
+				currentLightState=0
+			lichtcyclusThread= threading.Thread(target=lichtCyclus, daemon=True)
+			lichtcyclusThread.start()
+			
+	def lichtCyclus():
+		global C1
+		global C2
+		global C3
+		dayLeft = C1
+		dayTime = C3
+		nightTime = C2		
+		
+		global currentLightState
+		while True:
+			if dayLeft >=1:
+				for i in range(dayLeft):
+					
+					time.sleep(60)
+					dayLeft -=1
+					lichtStatus2.configure(text=f"{dayLeft} minuten")
+					
+			else:
+				if currentLightState == 1:
+					lichtStatus1.configure(text="uit")
+					lichtStatus2.configure(text=f"{nightTime} minuten")
+					currentLightState=0
+					dayLeft = nightTime
+				elif currentLightState == 0:
+					lichtStatus1.configure(text="aan")
+					lichtStatus2.configure(text=f"{dayTime} minuten")
+					currentLightState=1
+					dayLeft = dayTime
+			
+			package= F"C----H----T----R-G-B-L{currentLightState}V-\n"
+			ser.write(package.encode())
+	
+		
+	def abortLicht():
+		LOG(f"Lichtcyclus gestopt [Mode: {choice.lower()}]")
+		lichtStatus2.configure(text="inactief")
+		lichtStatus1.configure(text="uit")
+		# hier nog de serial write om licht uit te zetten maar he de arduino zit niet meer vast door die kindjes
+		package= "C----H----T----R-G-B-L0V-\n"
+		ser.write(package.encode())
+		lichtknop.configure(fg_color="#1f538d", hover_color = "#14375e", text="Laat er licht zijn!", command=lichtConfig)
+	
+	def lichtCallBack(choice):
+		if not choice == "Cyclus":
+			dagOver.delete(0, last_index=999)
+			nachtUren.delete(0, last_index=999)
+			dagUren.delete(0, last_index=999)
+			nachtUren.configure(state="disabled")
+			dagOver.configure(state="disabled")
+			dagUren.configure(state="disabled")
+		else:
+			nachtUren.configure(state="normal", placeholder_text="in minuten")
+			dagUren.configure(state="normal", placeholder_text="in minuten")
+			dagOver.configure(state="normal", placeholder_text="in minuten")
+	
+	lichtframe = CTkFrame(master=win, height=400, width=500,border_color="white",border_width=1)
+	lichtframe.place(x=79,y=500)
+	cancelButn = CTkButton(master=lichtframe,text="X",fg_color="red",hover_color="#8b0000",height=10,width=30,command=closeWin)
+	cancelButn.place(x=5,y=15,anchor=W)
+	label = CTkLabel(master=lichtframe, text="Lichtcyclus configuratie", font=("Roboto", 20))
+	label.place(y=15,x=155)
+	
+	ModusLabel=CTkLabel(master=lichtframe,text="Selecteer lichtmodus")
+	ModusLabel.place(x=30,y=70)
+	lichtModus = CTkOptionMenu(master=lichtframe,values=["Aan","Cyclus","Uit"], command=lichtCallBack)
+	lichtModus.place(x=350,y=70)
+
+	configlabel = CTkLabel(master=lichtframe,text="Cyclusinstellingen:", font=("Roboto", 16, 'bold'))
+	configlabel.place(x=30,y=130)
+
+	uurLabel = CTkLabel(master=lichtframe,text="Hoe lang het nacht moet zijn:")
+	uurLabel.place(x=30,y=160)
+	nachtUren = CTkEntry(master=lichtframe)
+	nachtUren.place(x=350,y=160)
+	
+	dagUrenLabel = CTkLabel(master=lichtframe,text="Hoe lang het dag moet zijn:")
+	dagUrenLabel.place(x=30,y=190)
+	dagUren = CTkEntry(master=lichtframe)
+	dagUren.place(x=350,y=190)
+	
+	dagLabel = CTkLabel(master=lichtframe,text="Over hoeveel minuten het nacht moet worden:")
+	dagLabel.place(x=30,y=220)
+	dagOver=CTkEntry(master=lichtframe)
+	dagOver.place(x=350,y=220)
+	
+	nachtUren.configure(state="disabled")
+	dagOver.configure(state="disabled")
+	
+	initLicht = CTkButton(master=lichtframe, text="Laat er licht zijn!", command=startLicht, width=150, height=20)
+	initLicht.place(y=340,x=175)
+
+def ignore():
+	pass
+
 # definieren van de window
 win = CTk()
 win.configure(bg="#555555")
@@ -204,6 +362,8 @@ win.geometry("1920x1080")
 win.title(version)
 win.attributes('-fullscreen', True)
 win.attributes('-topmost', False)
+
+win.protocol("WM_DELETE_WINDOW", ignore)
 
 # het frame waar bijna alles op zit
 mainframe = CTkFrame(master=win, height=700, width=1880)
@@ -267,7 +427,7 @@ def g2Active():
 	coGraph.set_data(x,tArray)
 	ax.relim()
 	ax2.relim()	
-	aax.legend(bbox_to_anchor=(0.15, 1.1))	
+	ax.legend(bbox_to_anchor=(0.15, 1.1))	
 	ax2.legend(bbox_to_anchor=(1.05, 1.1))
 	ax.get_xaxis().set_major_locator(MaxNLocator(integer=True))
 	ax.autoscale_view()
@@ -276,12 +436,12 @@ def g2Active():
 	
 
 def ERR(msg):
-	errorMessage = CTkLabel(master=popuptext,text=msg,text_color="#FF5733",height=20)
-	errorMessage.grid(pady=0,padx=0)
+	errorMessage = CTkLabel(master=popuptext,text=msg,text_color="#FF5733",height=20 , justify='left')
+	errorMessage.grid(pady=0,padx=0, sticky="NW")
 
 def LOG(msg):
-	logMessage = CTkLabel(master=popuptext,text=msg,height=20)
-	logMessage.grid(pady=0,padx=0)
+	logMessage = CTkLabel(master=popuptext,text=msg,height=20 , justify='left')
+	logMessage.grid(pady=0,padx=0, sticky="NW")
 
 grafiek1Knop = CTkButton(master=mainframe, text="grafiek 1",font=("roboto",18), width=400,height=40,fg_color="gray10", hover_color="gray10", command=g1Active)
 grafiek1Knop.place(x=940,y=600)
@@ -293,6 +453,23 @@ grafiek2Knop.place(x=1410,y=600)
 canvas = FigureCanvasTkAgg(fig, master=mainframe)
 canvas.draw()
 canvas.get_tk_widget().place(x=850, y=10, anchor=NW)
+
+# functies voor openen/sluiten cacl
+def openCacl():
+
+	cacl.configure(text="sluit cacl bakje", command = closeCacl)
+	toepasknopf.configure(state="disabled")
+	package= F"C----H10.0T----R-G-B-L0V0\n"
+	ser.write(package.encode())
+
+def closeCacl():
+	global humidi
+	toepasknopf.configure(state="normal")
+	cacl.configure(text="open cacl bakje", command = openCacl)
+	print(humidi[:4])
+	package= F"C----H{humidi[:4]}T----R-G-B-L0V0\n"
+	ser.write(package.encode())
+
 
 # functie voor popup grafiek en grafiek instellen
 def grafiekConfig():
@@ -410,11 +587,7 @@ def grafiekConfig():
 				
 			tijdtussenmetingen.configure(text=F"Tijd tussen metingen: {str(hoevaakMetingen)} seconden.\nOpgeslagen als: {bestandsnaam}.csv")
 			tijdtussenmetingen.grid(row=0,column=0)
-			"""for i in range(total_rows):
-				for j in range(total_columns):
-					e = CTkEntry(Tabelhierin, width=100,font=('Arial',16,'bold'))
-					e.grid(row=j+1, column=i) 
-					e.insert(END,lst[i][j])"""
+
 			arr = np.array([[]])
 			if meetO==1: arr = np.append(arr,oArray)
 			if meetCo ==1: arr = np.append(arr,coArray)
@@ -508,14 +681,7 @@ def grafiekConfig():
 	toepasbtn = CTkButton(master=ConfigWindow, text="Start meting", command=InitiateGraph, width=150, height=20)
 	toepasbtn.place(y=360,x=175)
 
-# functie voor het bijwerken van de grafiek
-def update_graph():
-	if arduinoAvailable:
-		ax.relim()
-		oArray = np.array([])
-		x = np.array([])
-		coArray = np.array([])
-			
+		
 # functie voor het wissen van de output
 def clearOutput():
 	for msg in popuptext.winfo_children():
@@ -619,12 +785,20 @@ Plotknopf.place(x=680,y=70,anchor=NW)
 ventknop = CTkButton(master=mainconfig,text="ventileer",state="disabled", command=ventileerAlles)
 ventknop.place(x=680,y=100,anchor=NW)
 
+# licht knop
+lichtknop = CTkButton(master=mainconfig,text="stel lichtsystemen in", state="disabled",command=lichtConfig)
+lichtknop.place(x=680,y=130,anchor=NW)
+
+# open cacl bak
+cacl = CTkButton(master=mainconfig,text="open cacl bakje",state="disabled",  command=openCacl)
+cacl.place(x=680,y=160,anchor=NW)
+
 # tekstlabel voor foutmeldingen etc.
 popuptext = CTkLabel(master=tabelWindo, text_color="#FF5733", text="", justify='left')
 popuptext.grid(row = 999, column = 0, sticky = NE, padx=10)
 
 # rood licht titel
-R= CTkLabel(master=mainconfig,text="R",text_color="red")
+R= CTkLabel(master=mainconfig,text="Rode ledstrip")
 R.place(x=10,y=130,anchor=NW)
 
 # of rood licht aan of uit staat
@@ -636,7 +810,7 @@ Rv= CTkSwitch(master=mainconfig,state="disabled",text="",button_color="red",butt
 Rv.place(x=420,y=130,anchor=NW)
 
 # groen licht titel
-G= CTkLabel(master=mainconfig,text="G",text_color="green")
+G= CTkLabel(master=mainconfig,text="Groene ledstrip")
 G.place(x=10,y=160,anchor=NW)
 
 # groen licht aan of uit
@@ -648,7 +822,7 @@ Gv= CTkSwitch(master=mainconfig,state="disabled",text="",button_color="green",bu
 Gv.place(x=420,y=160,anchor=NW)
 
 # blauw licht titel
-B= CTkLabel(master=mainconfig,text="B",text_color="blue")
+B= CTkLabel(master=mainconfig,text="Blauwe ledstrip")
 B.place(x=10,y=190,anchor=NW)
 
 # blauw licht aan of uit
@@ -659,67 +833,77 @@ Bo.place(x=160,y=190,anchor=NW)
 Bv= CTkSwitch(master=mainconfig,state="disabled",text="",button_color="blue",button_hover_color	="darkblue")
 Bv.place(x=420,y=190,anchor=NW)
 
+lichtStatusi = CTkLabel(master=mainconfig, text="Lightstatus")
+lichtStatusi.place(x=10,y=220,anchor=NW)
+
+lichtStatus1 = CTkLabel(master=mainconfig,text="uit")
+lichtStatus1.place(x=160,y=220,anchor=NW)
+
+lichtStatus2 = CTkLabel(master=mainconfig, text="inactief")
+lichtStatus2.place(x=420,y=220,anchor=NW)
+
 # camera feed verversen functie
 def show_frames():
     global cv2image
     cv2image = cv2.cvtColor(cap.read()[1], cv2.COLOR_BGR2RGB)
-    img = cv2.rotate(cv2image, cv2.ROTATE_90_CLOCKWISE)
-    img = cv2.rotate(img, cv2.ROTATE_90_COUNTERCLOCKWISE)
-    img = Image.fromarray(img)
+    # als we 'm willen draaien img = cv2.rotate(cv2image, cv2.ROTATE_90_CLOCKWISE)
+    img = Image.fromarray(cv2image)
     img = img.resize((800, 600))
     imgtk = ImageTk.PhotoImage(img, size=(800, 600))
     label.image = imgtk
     label.configure(image=imgtk)
-    label.after(30, show_frames)
+    label.after(40, show_frames)
 
 def update_values():
-     dataStr = ser.readline().decode('utf-8').rstrip()
-     ProcessedData = list(dataStr)
-     raspberrypicoretemperature = round(CPUTemperature().temperature,1)
-     CoreHeatVal.configure(text=str(raspberrypicoretemperature)+"°C")
-     bytes_avail = psutil.disk_usage('/').free
-     global GBfree
-     GBfree = bytes_avail / 1024 / 1024 / 1024
-     storageLeft.configure(text=f"{round(float(GBfree),2)} GB opslag over",text_color="grey") if float(GBfree) >1 else storageLeft.configure(text=f"{round(float(GBfree),2)} GB opslag over",text_color="#FF5733")
-     
-     if raspberrypicoretemperature >= 65:
-         CoreHeatVal.configure(text_color="#FF5733")
-     else:
-         CoreHeatVal.configure(text_color="white")
-     
-     try: 
-         oxygi = ProcessedData[13]+ProcessedData[14]+ProcessedData[15]+ProcessedData[16]+ProcessedData[17]
-         tempi = ProcessedData[7]+ProcessedData[8]+ProcessedData[9]+ProcessedData[10]+ProcessedData[11]+"°C"
-         humidi = ProcessedData[1]+ProcessedData[2]+ProcessedData[3]+ProcessedData[4]+ProcessedData[5]+"%"
-         if not ProcessedData[19] == "0":
-             coi = ProcessedData[19]+ProcessedData[20]+ProcessedData[21]+ProcessedData[22]
-         else:
-            coi = ProcessedData[20]+ProcessedData[21]+ProcessedData[22]
-         O.configure(text=oxygi+"%")
-         temp.configure(text=tempi)
-         Humid.configure(text=humidi)
-         CO.configure(text=coi+" ppm")
-     except:
-        ERR("Fout bij het lezen van sensorwaarden. (0xc003)")
-        print(ProcessedData)
-        print(dataStr)
-     
-     try:
-        if float(oxygi) >=19 and float(coi)<=2000 and ventknop.cget('fg_color') == "red":
-           package= "C----H----T----R-G-B-V0\n"
-           ser.write(package.encode())
-           LOG("Ventilering succesvol!")
-           ventknop.configure(text="ventileer", fg_color="#1f538d", hover_color = "#14375e",command=ventileerAlles)   
-     except:
-           ERR("Onbekende foutmelding")
-        
-     CoreHeatVal.after(1000,update_values)
+	time.sleep(3)
+	while True:
+	   global humidi
+	   if ser.in_waiting >0 and not ser.readline().rstrip() == "":
+             dataStr = ser.readline().decode('utf-8').rstrip()
+             ProcessedData = list(dataStr)
+             raspberrypicoretemperature = round(CPUTemperature().temperature,1)
+             CoreHeatVal.configure(text=str(raspberrypicoretemperature)+"°C")
+             bytes_avail = psutil.disk_usage('/').free
+             global GBfree
+             GBfree = bytes_avail / 1024 / 1024 / 1024
+             storageLeft.configure(text=f"{round(float(GBfree),2)} GB opslag over",text_color="grey") if float(GBfree) >1 else storageLeft.configure(text=f"{round(float(GBfree),2)} GB opslag over",text_color="#FF5733")
+             if raspberrypicoretemperature >= 65:
+                CoreHeatVal.configure(text_color="#FF5733")
+             else:
+                CoreHeatVal.configure(text_color="white")
+	     
+             try: 
+                 oxygi = ProcessedData[13]+ProcessedData[14]+ProcessedData[15]+ProcessedData[16]+ProcessedData[17]
+                 tempi = ProcessedData[7]+ProcessedData[8]+ProcessedData[9]+ProcessedData[10]+ProcessedData[11]+"°C"
+                 humidi = ProcessedData[1]+ProcessedData[2]+ProcessedData[3]+ProcessedData[4]+ProcessedData[5]+"%"
+                 if not ProcessedData[19] == "0":
+                    coi = ProcessedData[19]+ProcessedData[20]+ProcessedData[21]+ProcessedData[22]
+                 else:
+                    coi = ProcessedData[20]+ProcessedData[21]+ProcessedData[22]
+                 O.configure(text=oxygi+"%")
+                 temp.configure(text=tempi)
+                 Humid.configure(text=humidi)
+                 CO.configure(text=coi+" ppm")
+             except:
+                ERR("Fout bij het lezen van sensorwaarden. (0xc003)")
+                print(ProcessedData)
+                print(dataStr)
+	     
+             try:
+                if float(oxygi) >=19 and float(coi)<=2000 and ventknop.cget('fg_color') == "red":
+                   package= "C----H----T----R-G-B-L0V0\n"
+                   ser.write(package.encode())
+                   LOG("Ventilering succesvol!")
+                   ventknop.configure(text="ventileer", fg_color="#1f538d", hover_color = "#14375e",command=ventileerAlles)   
+             except:
+                   ERR("Onbekende byte in communicatie tussen sensoren.")
+                   LOG("Gecompenseerd voor onbekende byte, functionaliteit nominaal.")
 	                
 
 # gelezen waarden bijwerken functie
-time.sleep(5)
 if arduinoAvailable:
-    update_values()
+    waarden = threading.Thread(target=update_values, daemon=True)
+    waarden.start()	
 else:
     ERR("Arduino verbinding onstabiel of anders onbruikbaar. (0xc004)")
     raspberrypicoretemperature = round(CPUTemperature().temperature)

@@ -1,0 +1,16 @@
+{
+    "accountGegevens":[
+        {
+            "ID": "admin",
+            "pass": "Freyx739",
+            "Auth": 5 ,
+            "Debug": "True"
+        }, 
+        {
+            "ID": "docent",
+            "pass": "Kinre930",
+            "Auth": 4,
+            "Debug": "False"
+        }
+    ]
+}
